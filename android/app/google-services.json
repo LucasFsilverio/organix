@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "845430564450",
+    "project_id": "organix-lucas-2026-1f889",
+    "storage_bucket": "organix-lucas-2026-1f889.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:845430564450:android:06e3d0c9036ae1a4c8d33b",
+        "android_client_info": {
+          "package_name": "com.example.organix"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBf-gnRG8iEFAqTb4FzceCtzWpghIAcHR8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
