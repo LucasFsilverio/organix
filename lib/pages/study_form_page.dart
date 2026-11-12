@@ -49,16 +49,6 @@ class _StudyFormPageState extends State<StudyFormPage> {
     );
   }
 
-  void _limparFormulario() {
-    _materiaController.clear();
-    _conteudoController.clear();
-    _tempoController.clear();
-    setState(() {
-      _prioridade = Prioridade.media;
-      _precisaRevisar = false;
-    });
-  }
-
   Future<void> _salvar() async {
     final materia = _materiaController.text.trim();
     final conteudo = _conteudoController.text.trim();
@@ -84,13 +74,13 @@ class _StudyFormPageState extends State<StudyFormPage> {
       );
 
       if (!mounted) return;
-      _limparFormulario();
+      setState(() => _salvando = false);
       _mostrarMensagem('Estudo salvo!');
+      Navigator.pop(context); // volta para a home
     } catch (e) {
       if (!mounted) return;
+      setState(() => _salvando = false);
       _mostrarMensagem('Erro ao salvar: $e');
-    } finally {
-      if (mounted) setState(() => _salvando = false);
     }
   }
 

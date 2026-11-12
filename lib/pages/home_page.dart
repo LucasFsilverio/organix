@@ -1,5 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../services/firestore_service.dart';
+import '../widgets/destaque_imagem.dart';
+import '../widgets/estudos_concluidos.dart';
 import '../widgets/frase_motivacional.dart';
+import 'study_detail_page.dart';
 import 'study_form_page.dart';
 import 'study_list_page.dart';
 
@@ -33,7 +38,8 @@ class HomePage extends StatelessWidget {
           children: [
             _cabecalho(),
             const SizedBox(height: 20),
-            _cardResumo(),
+            _secaoEstudos(context),
+            const EstudosConcluidos(),
             const SizedBox(height: 28),
             const Text(
               'Destaques',
@@ -42,19 +48,9 @@ class HomePage extends StatelessWidget {
             const SizedBox(height: 12),
             Row(
               children: [
-                Expanded(
-                  child: _imagem(
-                    url: 'https://picsum.photos/seed/organix-estudo/400/300',
-                    ajuste: BoxFit.cover,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _imagem(
-                    url: 'https://picsum.photos/seed/organix-foco/400/300',
-                    ajuste: BoxFit.cover,
-                  ),
-                ),
+                Expanded(child: DestaqueImagem()),
+                SizedBox(width: 12),
+                Expanded(child: DestaqueImagem()),
               ],
             ),
             const SizedBox(height: 28),
@@ -122,27 +118,128 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _cardResumo() {
+  Widget _secaoEstudos(BuildContext context) {
+    final firestore = FirestoreService();
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: firestore.ouvirEstudos(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Text(
+              'Erro ao carregar os estudos: ${snapshot.error}',
+              style: TextStyle(color: Colors.red.shade900),
+            ),
+          );
+        }
+
+        final carregando = snapshot.connectionState == ConnectionState.waiting;
+        final docs = snapshot.data?.docs ?? [];
+
+        final total = docs.length;
+        final paraRevisar =
+            docs.where((d) => d.data()['precisaRevisar'] == true).length;
+        final minutos = docs.fold<int>(
+          0,
+          (soma, d) =>
+              soma + ((d.data()['tempoPrevisto'] as num?)?.toInt() ?? 0),
+        );
+        final pendentes = docs
+            .where((d) => d.data()['status'] != 'concluido')
+            .take(3)
+            .toList();
+
+        final tempoFormatado = minutos >= 60
+            ? '${minutos ~/ 60}h ${minutos % 60}min'
+            : '$minutos min';
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(20),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _estatistica(
+                    icone: Icons.menu_book,
+                    valor: carregando ? '...' : '$total',
+                    rotulo: 'Estudos',
+                  ),
+                  _estatistica(
+                    icone: Icons.flag,
+                    valor: carregando ? '...' : '$paraRevisar',
+                    rotulo: 'Para revisar',
+                  ),
+                  _estatistica(
+                    icone: Icons.timer,
+                    valor: carregando ? '...' : tempoFormatado,
+                    rotulo: 'Previstos',
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Próximos estudos',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 12),
+            if (!carregando && pendentes.isEmpty)
+              const Text(
+                'Nenhum estudo pendente. Cadastre um para começar!',
+                style: TextStyle(color: Colors.black54),
+              ),
+            ...pendentes.map(
+              (doc) => _itemProximo(context, doc.id, doc.data()),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _itemProximo(
+    BuildContext context,
+    String id,
+    Map<String, dynamic> dados,
+  ) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(20),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(14),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _estatistica(icone: Icons.menu_book, valor: '0', rotulo: 'Estudos'),
-          _estatistica(icone: Icons.flag, valor: '0', rotulo: 'Para revisar'),
-          _estatistica(icone: Icons.timer, valor: '0 min', rotulo: 'Previstos'),
-        ],
+      child: ListTile(
+        leading: const Icon(Icons.menu_book, color: _corPrincipal),
+        title: Text(dados['materia'] ?? ''),
+        subtitle: Text(dados['conteudo'] ?? ''),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => StudyDetailPage(id: id, dados: dados),
+            ),
+          );
+        },
       ),
     );
   }
@@ -165,25 +262,6 @@ class HomePage extends StatelessWidget {
           style: const TextStyle(fontSize: 12, color: Colors.black54),
         ),
       ],
-    );
-  }
-
-  Widget _imagem({required String url, required BoxFit ajuste}) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: SizedBox(
-        height: 130,
-        child: Image.network(
-          url,
-          fit: ajuste,
-          errorBuilder: (context, error, stack) => Container(
-            color: _corSuave.withAlpha(60),
-            child: const Center(
-              child: Icon(Icons.image_not_supported, color: _corPrincipal),
-            ),
-          ),
-        ),
-      ),
     );
   }
 

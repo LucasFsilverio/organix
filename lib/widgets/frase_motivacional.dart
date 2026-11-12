@@ -9,7 +9,6 @@ class FraseMotivacional extends StatefulWidget {
 }
 
 class _FraseMotivacionalState extends State<FraseMotivacional> {
-  // Busca a frase uma única vez, quando o widget aparece na tela.
   late final Future<Frase> _future;
 
   @override
